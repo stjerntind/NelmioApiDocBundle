@@ -148,7 +148,7 @@ final class FormModelDescriber implements ModelDescriberInterface, ModelRegistry
                 } else {
                     $property->setType('string');
                 }
-                if (($choices = $config->getOption('choices')) && is_array($choices) && count($choices)) {
+                if (($choices = $config->getAttribute('choice_list')->getChoices()) && is_array($choices) && count($choices)) {
                     $enums = array_values($choices);
                     if ($this->isNumbersArray($enums)) {
                         $type = 'number';
