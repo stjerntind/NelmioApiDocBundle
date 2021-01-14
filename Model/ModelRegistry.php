@@ -11,10 +11,10 @@
 
 namespace Nelmio\ApiDocBundle\Model;
 
+use EXSyst\Component\Swagger\Schema;
+use EXSyst\Component\Swagger\Swagger;
 use Nelmio\ApiDocBundle\Describer\ModelRegistryAwareInterface;
 use Nelmio\ApiDocBundle\ModelDescriber\ModelDescriberInterface;
-use Nelmio\ApiDocBundle\OpenApiPhp\Util;
-use OpenApi\Annotations as OA;
 use Symfony\Component\PropertyInfo\Type;
 
 final class ModelRegistry
@@ -36,15 +36,16 @@ final class ModelRegistry
      *
      * @internal
      */
-    public function __construct($modelDescribers, OA\OpenApi $api, array $alternativeNames = [])
+    public function __construct($modelDescribers, Swagger $api, array $alternativeNames = [])
     {
         $this->modelDescribers = $modelDescribers;
         $this->api = $api;
+        $this->alternativeNames = []; // last rule wins
 
         foreach (array_reverse($alternativeNames) as $alternativeName => $criteria) {
             $this->alternativeNames[] = $model = new Model(new Type('object', false, $criteria['type']), $criteria['groups']);
             $this->names[$model->getHash()] = $alternativeName;
-            Util::getSchema($this->api, $alternativeName);
+            $this->api->getDefinitions()->get($alternativeName);
         }
     }
 
@@ -60,15 +61,15 @@ final class ModelRegistry
         }
 
         // Reserve the name
-        Util::getSchema($this->api, $this->names[$hash]);
+        $this->api->getDefinitions()->get($this->names[$hash]);
 
-        return OA\Components::SCHEMA_REF.$this->names[$hash];
+        return '#/definitions/'.$this->names[$hash];
     }
 
     /**
      * @internal
      */
-    public function registerSchemas(): void
+    public function registerDefinitions()
     {
         while (count($this->unregistered)) {
             $tmp = [];
@@ -84,7 +85,7 @@ final class ModelRegistry
                         $modelDescriber->setModelRegistry($this);
                     }
                     if ($modelDescriber->supports($model)) {
-                        $schema = Util::getSchema($this->api, $name);
+                        $schema = new Schema();
                         $modelDescriber->describe($model, $schema);
 
                         break;
@@ -94,6 +95,8 @@ final class ModelRegistry
                 if (null === $schema) {
                     throw new \LogicException(sprintf('Schema of type "%s" can\'t be generated, no describer supports it.', $this->typeToString($model->getType())));
                 }
+
+                $this->api->getDefinitions()->set($name, $schema);
             }
         }
 
@@ -102,19 +105,18 @@ final class ModelRegistry
                 $this->register($model);
             }
             $this->alternativeNames = [];
-            $this->registerSchemas();
+            $this->registerDefinitions();
         }
     }
 
     private function generateModelName(Model $model): string
     {
+        $definitions = $this->api->getDefinitions();
+
         $name = $base = $this->getTypeShortName($model->getType());
-        $names = array_column(
-            $this->api->components instanceof OA\Components && is_array($this->api->components->schemas) ? $this->api->components->schemas : [],
-            'schema'
-        );
+
         $i = 1;
-        while (\in_array($name, $names, true)) {
+        while ($definitions->has($name)) {
             ++$i;
             $name = $base.$i;
         }

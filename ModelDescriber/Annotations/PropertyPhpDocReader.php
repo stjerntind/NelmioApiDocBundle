@@ -11,7 +11,8 @@
 
 namespace Nelmio\ApiDocBundle\ModelDescriber\Annotations;
 
-use OpenApi\Annotations as OA;
+use EXSyst\Component\Swagger\Schema;
+use Nelmio\ApiDocBundle\Model\Model;
 use phpDocumentor\Reflection\DocBlock\Tags\Var_;
 use phpDocumentor\Reflection\DocBlockFactory;
 
@@ -32,10 +33,10 @@ class PropertyPhpDocReader
     /**
      * Update the Swagger information with information from the DocBlock comment.
      */
-    public function updateProperty($reflection, OA\Property $property): void
+    public function updateProperty(\ReflectionProperty $reflectionProperty, Schema $property)
     {
         try {
-            $docBlock = $this->docBlockFactory->create($reflection);
+            $docBlock = $this->docBlockFactory->create($reflectionProperty);
         } catch (\Exception $e) {
             // ignore
             return;
@@ -44,7 +45,7 @@ class PropertyPhpDocReader
         if (!$title = $docBlock->getSummary()) {
             /** @var Var_ $var */
             foreach ($docBlock->getTagsByName('var') as $var) {
-                if (!method_exists($var, 'getDescription') || !$description = $var->getDescription()) {
+                if (!$description = $var->getDescription()) {
                     continue;
                 }
                 $title = $description->render();
@@ -53,11 +54,11 @@ class PropertyPhpDocReader
                 }
             }
         }
-        if (OA\UNDEFINED === $property->title && $title) {
-            $property->title = $title;
+        if (null === $property->getTitle() && $title) {
+            $property->setTitle($title);
         }
-        if (OA\UNDEFINED === $property->description && $docBlock->getDescription() && $docBlock->getDescription()->render()) {
-            $property->description = $docBlock->getDescription()->render();
+        if (null === $property->getDescription() && $docBlock->getDescription() && $docBlock->getDescription()->render()) {
+            $property->setDescription($docBlock->getDescription()->render());
         }
     }
 }

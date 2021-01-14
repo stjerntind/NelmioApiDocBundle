@@ -6,40 +6,39 @@ Sharing parameter configuration
 
 Q: I use the same value in multiple endpoints. How can I avoid duplicating the descriptions?
 
-A: You can configure ``schemas`` in the nelmio_api_doc configuration and then reference them:
+A: You can configure ``definitions`` in the nelmio_api_doc configuration and then reference them:
 
 .. code-block:: yaml
 
     # config/nelmio_api_doc.yml
     nelmio_api_doc:
         documentation:
-            components:
-                schemas:
-                    NelmioImageList:
-                        description: "Response for some queries"
-                        type: object
-                        properties:
-                            total:
-                                type: integer
-                                example: 42
+            definitions:
+                NelmioImageList:
+                    description: "Response for some queries"
+                    type: object
+                    properties:
+                        total:
+                            type: integer
+                            example: 42
+                        items:
+                            type: array
                             items:
-                                type: array
-                                items:
-                                    $ref: "#/components/schemas/ImageMetadata"
+                                $ref: "#/definitions/ImageMetadata"
 
 .. code-block:: php
 
     // src/App/Controller/NelmioController.php
 
     /**
-     * @OA\Response(
+     * @SWG\Response(
      *     response=200,
      *     description="List of image definitions",
-     *     @OA\JsonContent(@OA\Schema(
+     *     @SWG\Schema(
      *       type="object",
      *       title="ListOperationsResponse",
-     *       additionalProperties={"$ref": "#/components/schemas/NelmioImageList"}
-     *     ))
+     *       additionalProperties={"$ref": "#/definitions/NelmioImageList"}
+     *     )
      */
 
 Optional Path Parameters
@@ -56,7 +55,7 @@ optional? The controller might look like this::
      *     name="get_user_metadata"
      * )
      *
-     * @OA\Response(
+     * @SWG\Response(
      *     response=200,
      *     description="Json object with all user meta data or a json string with the value of the requested field"
      * )
@@ -77,13 +76,14 @@ separate actions in your controller. For example::
      *     name="get_user_metadata"
      * )
      *
-     * @OA\Response(
+     * @SWG\Response(
      *     response=200,
      *     description="Json hashmap with all user meta data",
-     *     @OA\JsonContent(@OA\Schema(
+     *     @SWG\Schema(
      *        type="object",
      *        example={"foo": "bar", "hello": "world"}
-     *     ))
+     *     )
+     *
      * )
      */
     public function cgetAction(string $user)
@@ -99,12 +99,12 @@ separate actions in your controller. For example::
      *     name="get_user_metadata_single"
      * )
      *
-     * @OA\Response(
+     * @SWG\Response(
      *     response=200,
      *     description="A json string with the value of the requested field",
-     *     @OA\JsonContent(@OA\Schema(
+     *     @SWG\Schema(
      *          type="string"
-     *     ))
+     *     )
      * )
      */
     public function getAction(string $user, string $metaName = null)
@@ -137,13 +137,13 @@ A: We removed the google fonts in 3.3 to avoid the external request for GDPR rea
 .. code-block:: twig
 
     {# templates/bundles/NelmioApiDocBundle/SwaggerUI/index.html.twig #}
-
+    
     {#
        To avoid a "reached nested level" error an exclamation mark `!` has to be added
        See https://symfony.com/blog/new-in-symfony-3-4-improved-the-overriding-of-templates
     #}
     {% extends '@!NelmioApiDoc/SwaggerUi/index.html.twig' %}
-
+    
     {% block stylesheets %}
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,700|Source+Code+Pro:300,600|Titillium+Web:400,600,700">
         {{ parent() }}
@@ -178,22 +178,3 @@ A: We removed the google fonts in 3.3 to avoid the external request for GDPR rea
             }
         </style>
     {% endblock stylesheets %}
-
-Endpoints grouping
-------------------
-
-Q: Areas feature doesn't fit my needs. So how can I group similar endpoints of one or more controllers in a separate section in the documentation?
-
-A: Use ``@OA\Tag`` annotation.
-
-.. code-block:: php
-
-    /**
-     * Class BookmarkController
-     *
-     * @OA\Tag(name="Bookmarks")
-     */
-    class BookmarkController extends AbstractFOSRestController implements ContextPresetInterface
-    {
-        //...
-    }

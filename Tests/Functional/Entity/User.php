@@ -11,7 +11,7 @@
 
 namespace Nelmio\ApiDocBundle\Tests\Functional\Entity;
 
-use OpenApi\Annotations as OA;
+use Swagger\Annotations as SWG;
 
 /**
  * @author Guilhem N. <egetick@gmail.com>
@@ -21,21 +21,19 @@ class User
     /**
      * @var int
      *
-     * @OA\Property(description = "User id", readOnly = true, title = "userid", default = null)
+     * @SWG\Property(description = "User id", readOnly = true, title = "userid", example=1, default = null)
      */
     private $id;
 
     /**
-     * @OA\Property(type="string", readOnly = false)
+     * @SWG\Property(type="string", readOnly = false)
      */
     private $email;
 
     /**
-     * User Roles Comment.
-     *
      * @var string[]
      *
-     * @OA\Property(
+     * @SWG\Property(
      *     description = "User roles",
      *     title = "roles",
      *     example="[""ADMIN"",""SUPERUSER""]",
@@ -45,28 +43,21 @@ class User
     private $roles;
 
     /**
-     * User Location.
-     *
-     * @OA\Property(type = "string")
-     */
-    private $location;
-
-    /**
      * @var int
      *
-     * @OA\Property(type = "string")
+     * @SWG\Property(type = "string")
      */
     private $friendsNumber;
 
     /**
      * @var float
-     * @OA\Property(default = 0.0)
+     * @SWG\Property(default = 0.0)
      */
     private $money;
 
     /**
      * @var \DateTime
-     * @OA\Property(property="creationDate")
+     * @SWG\Property(property="creationDate")
      */
     private $createdAt;
 
@@ -81,14 +72,9 @@ class User
     private $friend;
 
     /**
-     * @var User[]|null
-     */
-    private $friends;
-
-    /**
      * @var string
      *
-     * @OA\Property(enum = {"disabled", "enabled"})
+     * @SWG\Property(enum = {"disabled", "enabled"})
      */
     private $status;
 
@@ -97,13 +83,16 @@ class User
      */
     private $dateAsInterface;
 
+    /**
+     * @param float $money
+     */
     public function setMoney(float $money)
     {
         $this->money = $money;
     }
 
     /**
-     * @OA\Property(example=1)
+     * @param int $id
      */
     public function setId(int $id)
     {
@@ -123,10 +112,9 @@ class User
         $this->roles = $roles;
     }
 
-    public function setLocation(string $location)
-    {
-    }
-
+    /**
+     * @param int $friendsNumber
+     */
     public function setFriendsNumber(int $friendsNumber)
     {
         $this->friendsNumber = $friendsNumber;
@@ -144,10 +132,6 @@ class User
     {
     }
 
-    public function setFriends(array $friends = [])
-    {
-    }
-
     public function setDummy(Dummy $dummy)
     {
     }
@@ -156,11 +140,17 @@ class User
     {
     }
 
+    /**
+     * @return \DateTimeInterface
+     */
     public function getDateAsInterface(): \DateTimeInterface
     {
         return $this->dateAsInterface;
     }
 
+    /**
+     * @param \DateTimeInterface $dateAsInterface
+     */
     public function setDateAsInterface(\DateTimeInterface $dateAsInterface)
     {
         $this->dateAsInterface = $dateAsInterface;

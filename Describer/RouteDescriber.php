@@ -11,9 +11,10 @@
 
 namespace Nelmio\ApiDocBundle\Describer;
 
+use EXSyst\Component\Swagger\Swagger;
 use Nelmio\ApiDocBundle\RouteDescriber\RouteDescriberInterface;
 use Nelmio\ApiDocBundle\Util\ControllerReflector;
-use OpenApi\Annotations as OA;
+use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 
 final class RouteDescriber implements DescriberInterface, ModelRegistryAwareInterface
@@ -27,6 +28,8 @@ final class RouteDescriber implements DescriberInterface, ModelRegistryAwareInte
     private $routeDescribers;
 
     /**
+     * @param RouteCollection                    $routeCollection
+     * @param ControllerReflector                $controllerReflector
      * @param RouteDescriberInterface[]|iterable $routeDescribers
      */
     public function __construct(RouteCollection $routeCollection, ControllerReflector $controllerReflector, $routeDescribers)
@@ -36,7 +39,7 @@ final class RouteDescriber implements DescriberInterface, ModelRegistryAwareInte
         $this->routeDescribers = $routeDescribers;
     }
 
-    public function describe(OA\OpenApi $api)
+    public function describe(Swagger $api)
     {
         if (0 === count($this->routeDescribers)) {
             return;
@@ -50,7 +53,7 @@ final class RouteDescriber implements DescriberInterface, ModelRegistryAwareInte
             // if able to resolve the controller
             $controller = $route->getDefault('_controller');
             if ($method = $this->controllerReflector->getReflectionMethod($controller)) {
-                // Extract as many information as possible about this route
+                // Extract as many informations as possible about this route
                 foreach ($this->routeDescribers as $describer) {
                     if ($describer instanceof ModelRegistryAwareInterface) {
                         $describer->setModelRegistry($this->modelRegistry);

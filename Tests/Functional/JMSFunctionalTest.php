@@ -13,13 +13,6 @@ namespace Nelmio\ApiDocBundle\Tests\Functional;
 
 class JMSFunctionalTest extends WebTestCase
 {
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        static::createClient([], ['HTTP_HOST' => 'api.example.com']);
-    }
-
     public function testModelPictureDocumentation()
     {
         $this->assertEquals([
@@ -29,8 +22,7 @@ class JMSFunctionalTest extends WebTestCase
                     'type' => 'integer',
                 ],
             ],
-            'schema' => 'JMSPicture',
-        ], json_decode($this->getModel('JMSPicture')->toJson(), true));
+        ], $this->getModel('JMSPicture')->toArray());
 
         $this->assertEquals([
             'type' => 'object',
@@ -39,8 +31,7 @@ class JMSFunctionalTest extends WebTestCase
                     'type' => 'integer',
                 ],
             ],
-            'schema' => 'JMSPicture_mini',
-        ], json_decode($this->getModel('JMSPicture_mini')->toJson(), true));
+        ], $this->getModel('JMSPicture_mini')->toArray());
     }
 
     public function testModeChatDocumentation()
@@ -53,23 +44,21 @@ class JMSFunctionalTest extends WebTestCase
                 ],
                 'members' => [
                     'items' => [
-                        '$ref' => '#/components/schemas/JMSChatUser',
+                        '$ref' => '#/definitions/JMSChatUser',
                     ],
                     'type' => 'array',
                 ],
             ],
-            'schema' => 'JMSChat',
-        ], json_decode($this->getModel('JMSChat')->toJson(), true));
+        ], $this->getModel('JMSChat')->toArray());
 
         $this->assertEquals([
             'type' => 'object',
             'properties' => [
                 'picture' => [
-                    '$ref' => '#/components/schemas/JMSPicture',
+                    '$ref' => '#/definitions/JMSPicture',
                 ],
             ],
-            'schema' => 'JMSChatUser',
-        ], json_decode($this->getModel('JMSChatUser')->toJson(), true));
+        ], $this->getModel('JMSChatUser')->toArray());
     }
 
     public function testModelDocumentation()
@@ -83,7 +72,6 @@ class JMSFunctionalTest extends WebTestCase
                     'readOnly' => true,
                     'title' => 'userid',
                     'example' => 1,
-                    'default' => null,
                 ],
                 'daysOnline' => [
                     'type' => 'integer',
@@ -103,10 +91,6 @@ class JMSFunctionalTest extends WebTestCase
                     'default' => ['user'],
                     'description' => 'Roles list',
                 ],
-                'location' => [
-                    'type' => 'string',
-                    'title' => 'User Location.',
-                ],
                 'friendsNumber' => [
                     'type' => 'string',
                     'maxLength' => 100,
@@ -115,13 +99,13 @@ class JMSFunctionalTest extends WebTestCase
                 'friends' => [
                     'type' => 'array',
                     'items' => [
-                        '$ref' => '#/components/schemas/User',
+                        '$ref' => '#/definitions/User',
                     ],
                 ],
                 'indexed_friends' => [
                     'type' => 'object',
                     'additionalProperties' => [
-                        '$ref' => '#/components/schemas/User',
+                        '$ref' => '#/definitions/User',
                     ],
                 ],
                 'favorite_dates' => [
@@ -136,7 +120,7 @@ class JMSFunctionalTest extends WebTestCase
                     'format' => 'date-time',
                 ],
                 'best_friend' => [
-                    '$ref' => '#/components/schemas/User',
+                    '$ref' => '#/definitions/User',
                 ],
                 'status' => [
                     'type' => 'string',
@@ -145,12 +129,10 @@ class JMSFunctionalTest extends WebTestCase
                     'enum' => ['disabled', 'enabled'],
                 ],
                 'virtual_type1' => [
-                    'title' => 'JMS custom types handled via Custom Type Handlers.',
-                    'allOf' => [['$ref' => '#/components/schemas/VirtualTypeClassDoesNotExistsHandlerDefined']],
+                    '$ref' => '#/definitions/VirtualTypeClassDoesNotExistsHandlerDefined',
                 ],
                 'virtual_type2' => [
-                    'title' => 'JMS custom types handled via Custom Type Handlers.',
-                    'allOf' => [['$ref' => '#/components/schemas/VirtualTypeClassDoesNotExistsHandlerNotDefined']],
+                    '$ref' => '#/definitions/VirtualTypeClassDoesNotExistsHandlerNotDefined',
                 ],
                 'last_update' => [
                     'type' => 'date',
@@ -203,19 +185,11 @@ class JMSFunctionalTest extends WebTestCase
                         ],
                     ],
                 ],
-                'long' => [
-                    'type' => 'string',
-                ],
-                'short' => [
-                    'type' => 'integer',
-                ],
             ],
-            'schema' => 'JMSUser',
-        ], json_decode($this->getModel('JMSUser')->toJson(), true));
+        ], $this->getModel('JMSUser')->toArray());
 
         $this->assertEquals([
-            'schema' => 'VirtualTypeClassDoesNotExistsHandlerNotDefined',
-        ], json_decode($this->getModel('VirtualTypeClassDoesNotExistsHandlerNotDefined')->toJson(), true));
+        ], $this->getModel('VirtualTypeClassDoesNotExistsHandlerNotDefined')->toArray());
 
         $this->assertEquals([
             'type' => 'object',
@@ -224,8 +198,7 @@ class JMSFunctionalTest extends WebTestCase
                     'type' => 'string',
                 ],
             ],
-            'schema' => 'VirtualTypeClassDoesNotExistsHandlerDefined',
-        ], json_decode($this->getModel('VirtualTypeClassDoesNotExistsHandlerDefined')->toJson(), true));
+        ], $this->getModel('VirtualTypeClassDoesNotExistsHandlerDefined')->toArray());
     }
 
     public function testModelComplexDualDocumentation()
@@ -237,14 +210,13 @@ class JMSFunctionalTest extends WebTestCase
                     'type' => 'integer',
                 ],
                 'complex' => [
-                    '$ref' => '#/components/schemas/JMSComplex2',
+                    '$ref' => '#/definitions/JMSComplex2',
                 ],
                 'user' => [
-                    '$ref' => '#/components/schemas/JMSUser',
+                    '$ref' => '#/definitions/JMSUser',
                 ],
             ],
-            'schema' => 'JMSDualComplex',
-        ], json_decode($this->getModel('JMSDualComplex')->toJson(), true));
+        ], $this->getModel('JMSDualComplex')->toArray());
     }
 
     public function testNestedGroups()
@@ -252,11 +224,10 @@ class JMSFunctionalTest extends WebTestCase
         $this->assertEquals([
             'type' => 'object',
             'properties' => [
-                'living' => ['$ref' => '#/components/schemas/JMSChatLivingRoom'],
-                'dining' => ['$ref' => '#/components/schemas/JMSChatRoom'],
+                'living' => ['$ref' => '#/definitions/JMSChatLivingRoom'],
+                'dining' => ['$ref' => '#/definitions/JMSChatRoom'],
             ],
-            'schema' => 'JMSChatFriend',
-        ], json_decode($this->getModel('JMSChatFriend')->toJson(), true));
+        ], $this->getModel('JMSChatFriend')->toArray());
 
         $this->assertEquals([
             'type' => 'object',
@@ -264,8 +235,7 @@ class JMSFunctionalTest extends WebTestCase
                 'id1' => ['type' => 'integer'],
                 'id3' => ['type' => 'integer'],
             ],
-            'schema' => 'JMSChatRoom',
-        ], json_decode($this->getModel('JMSChatRoom')->toJson(), true));
+        ], $this->getModel('JMSChatRoom')->toArray());
     }
 
     public function testModelComplexDocumentation()
@@ -274,17 +244,15 @@ class JMSFunctionalTest extends WebTestCase
             'type' => 'object',
             'properties' => [
                 'id' => ['type' => 'integer'],
-                'user' => ['$ref' => '#/components/schemas/JMSUser'],
+                'user' => ['$ref' => '#/definitions/JMSUser'],
                 'name' => ['type' => 'string'],
-                'virtual' => ['$ref' => '#/components/schemas/JMSUser'],
-                'virtual_friend' => ['$ref' => '#/components/schemas/JMSUser'],
+                'virtual' => ['$ref' => '#/definitions/JMSUser'],
             ],
             'required' => [
                 'id',
                 'user',
             ],
-            'schema' => 'JMSComplex',
-        ], json_decode($this->getModel('JMSComplex')->toJson(), true));
+        ], $this->getModel('JMSComplex')->toArray());
     }
 
     public function testYamlConfig()
@@ -298,12 +266,8 @@ class JMSFunctionalTest extends WebTestCase
                 'email' => [
                     'type' => 'string',
                 ],
-                'virtualprop' => [
-                    'type' => 'string',
-                ],
             ],
-            'schema' => 'VirtualProperty',
-        ], json_decode($this->getModel('VirtualProperty')->toJson(), true));
+        ], $this->getModel('VirtualProperty')->toArray());
     }
 
     public function testNamingStrategyWithConstraints()
@@ -318,12 +282,11 @@ class JMSFunctionalTest extends WebTestCase
                 ],
             ],
             'required' => ['beautifulName'],
-            'schema' => 'JMSNamingStrategyConstraints',
-        ], json_decode($this->getModel('JMSNamingStrategyConstraints')->toJson(), true));
+        ], $this->getModel('JMSNamingStrategyConstraints')->toArray());
     }
 
     protected static function createKernel(array $options = [])
     {
-        return new TestKernel(TestKernel::USE_JMS);
+        return new TestKernel(true);
     }
 }

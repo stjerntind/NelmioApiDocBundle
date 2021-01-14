@@ -11,38 +11,24 @@
 
 namespace Nelmio\ApiDocBundle;
 
+use EXSyst\Component\Swagger\Swagger;
 use Nelmio\ApiDocBundle\Describer\DescriberInterface;
 use Nelmio\ApiDocBundle\Describer\ModelRegistryAwareInterface;
 use Nelmio\ApiDocBundle\Model\ModelRegistry;
 use Nelmio\ApiDocBundle\ModelDescriber\ModelDescriberInterface;
-use Nelmio\ApiDocBundle\OpenApiPhp\DefaultOperationId;
-use Nelmio\ApiDocBundle\OpenApiPhp\ModelRegister;
-use OpenApi\Analysis;
-use OpenApi\Annotations\OpenApi;
 use Psr\Cache\CacheItemPoolInterface;
 
 final class ApiDocGenerator
 {
-    /** @var OpenApi */
-    private $openApi;
+    private $swagger;
 
-    /** @var iterable|DescriberInterface[] */
     private $describers;
 
-    /** @var iterable|ModelDescriberInterface[] */
     private $modelDescribers;
 
-    /** @var CacheItemPoolInterface|null */
     private $cacheItemPool;
 
-    /** @var string|null */
-    private $cacheItemId;
-
-    /** @var string[] */
     private $alternativeNames = [];
-
-    /** @var string[] */
-    private $mediaTypes = ['json'];
 
     /**
      * @param DescriberInterface[]|iterable      $describers
@@ -61,54 +47,34 @@ final class ApiDocGenerator
         $this->alternativeNames = $alternativeNames;
     }
 
-    public function setMediaTypes(array $mediaTypes)
+    public function generate(): Swagger
     {
-        $this->mediaTypes = $mediaTypes;
-    }
-
-    public function generate(): OpenApi
-    {
-        if (null !== $this->openApi) {
-            return $this->openApi;
+        if (null !== $this->swagger) {
+            return $this->swagger;
         }
 
         if ($this->cacheItemPool) {
-            $item = $this->cacheItemPool->getItem($this->cacheItemId ?? 'openapi_doc');
+            $item = $this->cacheItemPool->getItem($this->cacheItemId ?? 'swagger_doc');
             if ($item->isHit()) {
-                return $this->openApi = $item->get();
+                return $this->swagger = $item->get();
             }
         }
 
-        $this->openApi = new OpenApi([]);
-        $modelRegistry = new ModelRegistry($this->modelDescribers, $this->openApi, $this->alternativeNames);
+        $this->swagger = new Swagger();
+        $modelRegistry = new ModelRegistry($this->modelDescribers, $this->swagger, $this->alternativeNames);
         foreach ($this->describers as $describer) {
             if ($describer instanceof ModelRegistryAwareInterface) {
                 $describer->setModelRegistry($modelRegistry);
             }
 
-            $describer->describe($this->openApi);
+            $describer->describe($this->swagger);
         }
-
-        $analysis = new Analysis();
-        $analysis->addAnnotation($this->openApi, null);
-
-        // Register model annotations
-        $modelRegister = new ModelRegister($modelRegistry, $this->mediaTypes);
-        $modelRegister($analysis);
-
-        // Calculate the associated schemas
-        $modelRegistry->registerSchemas();
-
-        $defaultOperationIdProcessor = new DefaultOperationId();
-        $defaultOperationIdProcessor($analysis);
-
-        $analysis->process();
-        $analysis->validate();
+        $modelRegistry->registerDefinitions();
 
         if (isset($item)) {
-            $this->cacheItemPool->save($item->set($this->openApi));
+            $this->cacheItemPool->save($item->set($this->swagger));
         }
 
-        return $this->openApi;
+        return $this->swagger;
     }
 }

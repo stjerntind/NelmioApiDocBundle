@@ -15,13 +15,6 @@ use Hateoas\Configuration\Embedded;
 
 class BazingaFunctionalTest extends WebTestCase
 {
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        static::createClient([], ['HTTP_HOST' => 'api.example.com']);
-    }
-
     public function testModelComplexDocumentationBazinga()
     {
         $this->assertEquals([
@@ -72,8 +65,7 @@ class BazingaFunctionalTest extends WebTestCase
                     ],
                 ],
             ],
-            'schema' => 'BazingaUser',
-        ], json_decode($this->getModel('BazingaUser')->toJson(), true));
+        ], $this->getModel('BazingaUser')->toArray());
     }
 
     public function testWithGroup()
@@ -90,8 +82,7 @@ class BazingaFunctionalTest extends WebTestCase
                     ],
                 ],
             ],
-            'schema' => 'BazingaUser_grouped',
-        ], json_decode($this->getModel('BazingaUser_grouped')->toJson(), true));
+        ], $this->getModel('BazingaUser_grouped')->toArray());
     }
 
     public function testWithType()
@@ -109,7 +100,7 @@ class BazingaFunctionalTest extends WebTestCase
                     'properties' => [
                         'typed_bazinga_users' => [
                             'items' => [
-                                '$ref' => '#/components/schemas/BazingaUser',
+                                '$ref' => '#/definitions/BazingaUser',
                             ],
                             'type' => 'array',
                         ],
@@ -119,12 +110,11 @@ class BazingaFunctionalTest extends WebTestCase
                     ],
                 ],
             ],
-            'schema' => 'BazingaUserTyped',
-        ], json_decode($this->getModel('BazingaUserTyped')->toJson(), true));
+        ], $this->getModel('BazingaUserTyped')->toArray());
     }
 
     protected static function createKernel(array $options = [])
     {
-        return new TestKernel(TestKernel::USE_JMS | TestKernel::USE_BAZINGA);
+        return new TestKernel(true, true);
     }
 }

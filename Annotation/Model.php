@@ -11,8 +11,7 @@
 
 namespace Nelmio\ApiDocBundle\Annotation;
 
-use OpenApi\Annotations\AbstractAnnotation;
-use OpenApi\Annotations\Parameter;
+use Swagger\Annotations\AbstractAnnotation;
 
 /**
  * @Annotation
@@ -23,13 +22,13 @@ final class Model extends AbstractAnnotation
     public static $_types = [
         'type' => 'string',
         'groups' => '[string]',
-        'options' => '[mixed]',
     ];
 
     public static $_required = ['type'];
 
     public static $_parents = [
-        Parameter::class,
+        'Swagger\Annotations\Parameter',
+        'Swagger\Annotations\Response',
     ];
 
     /**
@@ -41,9 +40,4 @@ final class Model extends AbstractAnnotation
      * @var string[]
      */
     public $groups;
-
-    /**
-     * @var mixed[]
-     */
-    public $options;
 }

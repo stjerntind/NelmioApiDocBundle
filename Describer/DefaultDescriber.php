@@ -11,8 +11,7 @@
 
 namespace Nelmio\ApiDocBundle\Describer;
 
-use Nelmio\ApiDocBundle\OpenApiPhp\Util;
-use OpenApi\Annotations as OA;
+use EXSyst\Component\Swagger\Swagger;
 
 /**
  * Makes the swagger documentation valid even if there are missing fields.
@@ -21,30 +20,27 @@ use OpenApi\Annotations as OA;
  */
 final class DefaultDescriber implements DescriberInterface
 {
-    public function describe(OA\OpenApi $api)
+    public function describe(Swagger $api)
     {
         // Info
-        /** @var OA\Info $info */
-        $info = Util::getChild($api, OA\Info::class);
-        if (OA\UNDEFINED === $info->title) {
-            $info->title = '';
+        $info = $api->getInfo();
+        if (null === $info->getTitle()) {
+            $info->setTitle('');
         }
-        if (OA\UNDEFINED === $info->version) {
-            $info->version = '0.0.0';
+        if (null === $info->getVersion()) {
+            $info->setVersion('0.0.0');
         }
 
         // Paths
-        if (OA\UNDEFINED === $api->paths) {
-            $api->paths = [];
-        }
-        foreach ($api->paths as $path) {
-            foreach (Util::OPERATIONS as $method) {
-                /** @var OA\Operation $operation */
-                $operation = $path->{$method};
-                if (OA\UNDEFINED !== $operation && null !== $operation && (OA\UNDEFINED === $operation->responses || empty($operation->responses))) {
-                    /** @var OA\Response $response */
-                    $response = Util::getIndexedCollectionItem($operation, OA\Response::class, 'default');
-                    $response->description = '';
+        $paths = $api->getPaths();
+        foreach ($paths as $uri => $path) {
+            foreach ($path->getMethods() as $method) {
+                $operation = $path->getOperation($method);
+
+                // Default Response
+                if (0 === iterator_count($operation->getResponses())) {
+                    $defaultResponse = $operation->getResponses()->get('default');
+                    $defaultResponse->setDescription('');
                 }
             }
         }

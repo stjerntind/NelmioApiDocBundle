@@ -11,9 +11,9 @@
 
 namespace Nelmio\ApiDocBundle\Controller;
 
-use OpenApi\Annotations\OpenApi;
-use OpenApi\Annotations\Server;
+use Nelmio\ApiDocBundle\ApiDocGenerator;
 use Psr\Container\ContainerInterface;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
@@ -22,8 +22,22 @@ final class DocumentationController
 {
     private $generatorLocator;
 
-    public function __construct(ContainerInterface $generatorLocator)
+    /**
+     * @param ContainerInterface $generatorLocator
+     */
+    public function __construct($generatorLocator)
     {
+        if (!$generatorLocator instanceof ContainerInterface) {
+            if (!$generatorLocator instanceof ApiDocGenerator) {
+                throw new \InvalidArgumentException(sprintf('Providing an instance of "%s" to "%s" is not supported.', get_class($generatorLocator), __METHOD__));
+            }
+
+            @trigger_error(sprintf('Providing an instance of "%s" to "%s()" is deprecated since version 3.1. Provide it an instance of "%s" instead.', ApiDocGenerator::class, __METHOD__, ContainerInterface::class), E_USER_DEPRECATED);
+            $generatorLocator = new ServiceLocator(['default' => function () use ($generatorLocator): ApiDocGenerator {
+                return $generatorLocator;
+            }]);
+        }
+
         $this->generatorLocator = $generatorLocator;
     }
 
@@ -33,11 +47,14 @@ final class DocumentationController
             throw new BadRequestHttpException(sprintf('Area "%s" is not supported as it isn\'t defined in config.', $area));
         }
 
-        /** @var OpenApi $spec */
-        $spec = $this->generatorLocator->get($area)->generate();
+        $spec = $this->generatorLocator->get($area)->generate()->toArray();
 
         if ('' !== $request->getBaseUrl()) {
-            $spec->servers = [new Server(['url' => $request->getSchemeAndHttpHost().$request->getBaseUrl()])];
+            $spec['basePath'] = $request->getBaseUrl();
+        }
+
+        if (empty($spec['host'])) {
+            $spec['host'] = $request->getHost();
         }
 
         return new JsonResponse($spec);

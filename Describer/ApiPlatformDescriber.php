@@ -12,7 +12,6 @@
 namespace Nelmio\ApiDocBundle\Describer;
 
 use ApiPlatform\Core\Documentation\Documentation;
-use ApiPlatform\Core\Swagger\Serializer\DocumentationNormalizer;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
 final class ApiPlatformDescriber extends ExternalDocDescriber
@@ -24,12 +23,7 @@ final class ApiPlatformDescriber extends ExternalDocDescriber
         }
 
         parent::__construct(function () use ($documentation, $normalizer) {
-            $documentation = (array) $normalizer->normalize(
-                $documentation,
-                null,
-                [DocumentationNormalizer::SPEC_VERSION => 3]
-            );
-
+            $documentation = (array) $normalizer->normalize($documentation);
             unset($documentation['basePath']);
 
             return $documentation;
