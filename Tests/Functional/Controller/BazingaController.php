@@ -13,8 +13,8 @@ namespace Nelmio\ApiDocBundle\Tests\Functional\Controller;
 
 use Nelmio\ApiDocBundle\Annotation\Model;
 use Nelmio\ApiDocBundle\Tests\Functional\Entity\BazingaUser;
-use OpenApi\Annotations as OA;
-use Symfony\Component\Routing\Annotation\Route;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
+use Swagger\Annotations as SWG;
 
 /**
  * @Route(host="api.example.com")
@@ -23,7 +23,7 @@ class BazingaController
 {
     /**
      * @Route("/api/bazinga", methods={"GET"})
-     * @OA\Response(
+     * @SWG\Response(
      *     response=200,
      *     description="Success",
      *     @Model(type=BazingaUser::class)
@@ -35,7 +35,7 @@ class BazingaController
 
     /**
      * @Route("/api/bazinga_foo", methods={"GET"})
-     * @OA\Response(
+     * @SWG\Response(
      *     response=200,
      *     description="Success",
      *     @Model(type=BazingaUser::class, groups={"foo"})

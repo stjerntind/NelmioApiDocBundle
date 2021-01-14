@@ -11,30 +11,32 @@
 
 namespace Nelmio\ApiDocBundle\RouteDescriber;
 
-use Nelmio\ApiDocBundle\OpenApiPhp\Util;
-use OpenApi\Annotations as OA;
-use OpenApi\Annotations\OpenApi;
+use EXSyst\Component\Swagger\Operation;
+use EXSyst\Component\Swagger\Swagger;
 use Symfony\Component\Routing\Route;
 
+/**
+ * @internal
+ */
 trait RouteDescriberTrait
 {
     /**
      * @internal
      *
-     * @return OA\Operation[]
+     * @return Operation[]
      */
-    private function getOperations(OpenApi $api, Route $route): array
+    private function getOperations(Swagger $api, Route $route): array
     {
         $operations = [];
-        $path = Util::getPath($api, $this->normalizePath($route->getPath()));
-        $methods = $route->getMethods() ?: Util::OPERATIONS;
+        $path = $api->getPaths()->get($this->normalizePath($route->getPath()));
+        $methods = $route->getMethods() ?: Swagger::$METHODS;
         foreach ($methods as $method) {
             $method = strtolower($method);
-            if (!in_array($method, Util::OPERATIONS)) {
+            if (!in_array($method, Swagger::$METHODS)) {
                 continue;
             }
 
-            $operations[] = Util::getOperation($path, $method);
+            $operations[] = $path->getOperation($method);
         }
 
         return $operations;

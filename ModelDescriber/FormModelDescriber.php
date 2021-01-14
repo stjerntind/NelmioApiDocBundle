@@ -11,16 +11,13 @@
 
 namespace Nelmio\ApiDocBundle\ModelDescriber;
 
-use Doctrine\Common\Annotations\Reader;
+use EXSyst\Component\Swagger\Schema;
 use Nelmio\ApiDocBundle\Describer\ModelRegistryAwareInterface;
 use Nelmio\ApiDocBundle\Describer\ModelRegistryAwareTrait;
 use Nelmio\ApiDocBundle\Model\Model;
-use Nelmio\ApiDocBundle\ModelDescriber\Annotations\AnnotationsReader;
-use Nelmio\ApiDocBundle\OpenApiPhp\Util;
-use OpenApi\Annotations as OA;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\FormType;
-use Symfony\Component\Form\FormConfigInterface;
+use Symfony\Component\Form\FormConfigBuilderInterface;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormTypeInterface;
@@ -35,25 +32,13 @@ final class FormModelDescriber implements ModelDescriberInterface, ModelRegistry
     use ModelRegistryAwareTrait;
 
     private $formFactory;
-    private $doctrineReader;
-    private $mediaTypes;
 
-    public function __construct(FormFactoryInterface $formFactory = null, Reader $reader = null, array $mediaTypes = null)
+    public function __construct(FormFactoryInterface $formFactory = null)
     {
         $this->formFactory = $formFactory;
-        $this->doctrineReader = $reader;
-        if (null === $reader) {
-            @trigger_error(sprintf('Not passing a doctrine reader to the constructor of %s is deprecated since version 3.8 and won\'t be allowed in version 5.', self::class), E_USER_DEPRECATED);
-        }
-
-        if (null === $mediaTypes) {
-            $mediaTypes = ['json'];
-            @trigger_error(sprintf('Not passing media types to the constructor of %s is deprecated since version 4.1 and won\'t be allowed in version 5.', self::class), E_USER_DEPRECATED);
-        }
-        $this->mediaTypes = $mediaTypes;
     }
 
-    public function describe(Model $model, OA\Schema $schema)
+    public function describe(Model $model, Schema $schema)
     {
         if (method_exists(AbstractType::class, 'setDefaultOptions')) {
             throw new \LogicException('symfony/form < 3.0 is not supported, please upgrade to an higher version to use a form as a model.');
@@ -62,14 +47,11 @@ final class FormModelDescriber implements ModelDescriberInterface, ModelRegistry
             throw new \LogicException('You need to enable forms in your application to use a form as a model.');
         }
 
-        $schema->type = 'object';
+        $schema->setType('object');
 
         $class = $model->getType()->getClassName();
 
-        $annotationsReader = new AnnotationsReader($this->doctrineReader, $this->modelRegistry, $this->mediaTypes);
-        $annotationsReader->updateDefinition(new \ReflectionClass($class), $schema);
-
-        $form = $this->formFactory->create($class, null, $model->getOptions() ?? []);
+        $form = $this->formFactory->create($class, null, []);
         $this->parseForm($schema, $form);
     }
 
@@ -78,29 +60,26 @@ final class FormModelDescriber implements ModelDescriberInterface, ModelRegistry
         return is_a($model->getType()->getClassName(), FormTypeInterface::class, true);
     }
 
-    private function parseForm(OA\Schema $schema, FormInterface $form)
+    private function parseForm(Schema $schema, FormInterface $form)
     {
+        $properties = $schema->getProperties();
+
         foreach ($form as $name => $child) {
             $config = $child->getConfig();
-
-            // This field must not be documented
-            if ($config->hasOption('documentation') && false === $config->getOption('documentation')) {
-                continue;
-            }
-            $property = Util::getProperty($schema, $name);
+            $property = $properties->get($name);
 
             if ($config->getRequired()) {
-                $required = OA\UNDEFINED !== $schema->required ? $schema->required : [];
+                $required = $schema->getRequired() ?? [];
                 $required[] = $name;
 
-                $schema->required = $required;
+                $schema->setRequired($required);
             }
 
             if ($config->hasOption('documentation')) {
-                $property->mergeProperties($config->getOption('documentation'));
+                $property->merge($config->getOption('documentation'));
             }
 
-            if (OA\UNDEFINED !== $property->type) {
+            if (null !== $property->getType()) {
                 continue; // Type manually defined
             }
 
@@ -111,20 +90,19 @@ final class FormModelDescriber implements ModelDescriberInterface, ModelRegistry
     /**
      * Finds and sets the schema type on $property based on $config info.
      *
-     * Returns true if a native OpenAPi type was found, false otherwise
+     * Returns true if a native Swagger type was found, false otherwise
+     *
+     * @param FormConfigBuilderInterface $config
+     * @param                            $property
      */
-    private function findFormType(FormConfigInterface $config, OA\Schema $property)
+    private function findFormType(FormConfigBuilderInterface $config, $property)
     {
         $type = $config->getType();
 
         if (!$builtinFormType = $this->getBuiltinFormType($type)) {
             // if form type is not builtin in Form component.
-            $model = new Model(
-                new Type(Type::BUILTIN_TYPE_OBJECT, false, get_class($type->getInnerType())),
-                null,
-                $config->getOptions()
-            );
-            $property->ref = $this->modelRegistry->register($model);
+            $model = new Model(new Type(Type::BUILTIN_TYPE_OBJECT, false, get_class($type->getInnerType())));
+            $property->setRef($this->modelRegistry->register($model));
 
             return;
         }
@@ -133,42 +111,42 @@ final class FormModelDescriber implements ModelDescriberInterface, ModelRegistry
             $blockPrefix = $builtinFormType->getBlockPrefix();
 
             if ('text' === $blockPrefix) {
-                $property->type = 'string';
+                $property->setType('string');
 
                 break;
             }
 
             if ('number' === $blockPrefix) {
-                $property->type = 'number';
+                $property->setType('number');
 
                 break;
             }
 
             if ('integer' === $blockPrefix) {
-                $property->type = 'integer';
+                $property->setType('integer');
 
                 break;
             }
 
             if ('date' === $blockPrefix) {
-                $property->type = 'string';
-                $property->format = 'date';
+                $property->setType('string');
+                $property->setFormat('date');
 
                 break;
             }
 
             if ('datetime' === $blockPrefix) {
-                $property->type = 'string';
-                $property->format = 'date-time';
+                $property->setType('string');
+                $property->setFormat('date-time');
 
                 break;
             }
 
             if ('choice' === $blockPrefix) {
                 if ($config->getOption('multiple')) {
-                    $property->type = 'array';
+                    $property->setType('array');
                 } else {
-                    $property->type = 'string';
+                    $property->setType('string');
                 }
                 if (($choices = $config->getAttribute('choice_list')->getChoices()) && is_array($choices) && count($choices)) {
                     $enums = array_values($choices);
@@ -181,10 +159,9 @@ final class FormModelDescriber implements ModelDescriberInterface, ModelRegistry
                     }
 
                     if ($config->getOption('multiple')) {
-                        $property->items = Util::createChild($property, OA\Items::class, ['type' => $type, 'enum' => $enums]);
+                        $property->getItems()->setType($type)->setEnum($enums);
                     } else {
-                        $property->type = $type;
-                        $property->enum = $enums;
+                        $property->setType($type)->setEnum($enums);
                     }
                 }
 
@@ -192,28 +169,28 @@ final class FormModelDescriber implements ModelDescriberInterface, ModelRegistry
             }
 
             if ('checkbox' === $blockPrefix) {
-                $property->type= 'boolean';
+                $property->setType('boolean');
 
                 break;
             }
 
             if ('password' === $blockPrefix) {
-                $property->type = 'string';
-                $property->format = 'password';
+                $property->setType('string');
+                $property->setFormat('password');
 
                 break;
             }
 
             if ('repeated' === $blockPrefix) {
-                $property->type = 'object';
-                $property->required = [$config->getOption('first_name'), $config->getOption('second_name')];
+                $property->setType('object');
+                $property->setRequired([$config->getOption('first_name'), $config->getOption('second_name')]);
                 $subType = $config->getOption('type');
 
                 foreach (['first', 'second'] as $subField) {
                     $subName = $config->getOption($subField.'_name');
                     $subForm = $this->formFactory->create($subType, null, array_merge($config->getOption('options'), $config->getOption($subField.'_options')));
 
-                    $this->findFormType($subForm->getConfig(), Util::getProperty($property, $subName));
+                    $this->findFormType($subForm->getConfig(), $property->getProperties()->get($subName));
                 }
 
                 break;
@@ -224,10 +201,10 @@ final class FormModelDescriber implements ModelDescriberInterface, ModelRegistry
                 $subOptions = $config->getOption('entry_options');
                 $subForm = $this->formFactory->create($subType, null, $subOptions);
 
-                $property->type = 'array';
-                $property->items = Util::createChild($property, OA\Items::class);
+                $property->setType('array');
+                $itemsProp = $property->getItems();
 
-                $this->findFormType($subForm->getConfig(), $property->items);
+                $this->findFormType($subForm->getConfig(), $itemsProp);
 
                 break;
             }
@@ -237,12 +214,12 @@ final class FormModelDescriber implements ModelDescriberInterface, ModelRegistry
                 $entityClass = $config->getOption('class');
 
                 if ($config->getOption('multiple')) {
-                    $property->format = sprintf('[%s id]', $entityClass);
-                    $property->type = 'array';
-                    $property->items = Util::createChild($property, OA\Items::class, ['type' => 'string']);
+                    $property->setFormat(sprintf('[%s id]', $entityClass));
+                    $property->setType('array');
+                    $property->getItems()->setType('string');
                 } else {
-                    $property->type = 'string';
-                    $property->format = sprintf('%s id', $entityClass);
+                    $property->setType('string');
+                    $property->setFormat(sprintf('%s id', $entityClass));
                 }
 
                 break;
@@ -251,6 +228,8 @@ final class FormModelDescriber implements ModelDescriberInterface, ModelRegistry
     }
 
     /**
+     * @param array $array
+     *
      * @return bool true if $array contains only numbers, false otherwise
      */
     private function isNumbersArray(array $array): bool
@@ -265,6 +244,8 @@ final class FormModelDescriber implements ModelDescriberInterface, ModelRegistry
     }
 
     /**
+     * @param array $array
+     *
      * @return bool true if $array contains only booleans, false otherwise
      */
     private function isBooleansArray(array $array): bool
@@ -279,6 +260,8 @@ final class FormModelDescriber implements ModelDescriberInterface, ModelRegistry
     }
 
     /**
+     * @param ResolvedFormTypeInterface $type
+     *
      * @return ResolvedFormTypeInterface|null
      */
     private function getBuiltinFormType(ResolvedFormTypeInterface $type)

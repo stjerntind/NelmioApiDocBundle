@@ -1,4 +1,3 @@
-/var/
 /vendor/
 /composer.phar
 /composer.lock
@@ -6,6 +5,5 @@
 /.php_cs
 /phpunit.xml
 /.phpunit
-/.phpunit.result.cache
 /Tests/Functional/cache
 /Tests/Functional/logs

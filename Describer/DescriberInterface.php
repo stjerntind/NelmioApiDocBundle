@@ -11,9 +11,9 @@
 
 namespace Nelmio\ApiDocBundle\Describer;
 
-use OpenApi\Annotations\OpenApi;
+use EXSyst\Component\Swagger\Swagger;
 
 interface DescriberInterface
 {
-    public function describe(OpenApi $api);
+    public function describe(Swagger $api);
 }

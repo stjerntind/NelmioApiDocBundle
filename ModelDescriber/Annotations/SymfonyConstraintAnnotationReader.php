@@ -12,7 +12,7 @@
 namespace Nelmio\ApiDocBundle\ModelDescriber\Annotations;
 
 use Doctrine\Common\Annotations\Reader;
-use OpenApi\Annotations as OA;
+use EXSyst\Component\Swagger\Schema;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -26,7 +26,7 @@ class SymfonyConstraintAnnotationReader
     private $annotationsReader;
 
     /**
-     * @var OA\Schema
+     * @var Schema
      */
     private $schema;
 
@@ -38,22 +38,12 @@ class SymfonyConstraintAnnotationReader
     /**
      * Update the given property and schema with defined Symfony constraints.
      */
-    public function updateProperty($reflection, OA\Property $property): void
+    public function updateProperty(\ReflectionProperty $reflectionProperty, Schema $property)
     {
-        if ($reflection instanceof \ReflectionProperty) {
-            $annotations = $this->annotationsReader->getPropertyAnnotations($reflection);
-        } else {
-            $annotations = $this->annotationsReader->getMethodAnnotations($reflection);
-        }
+        $annotations = $this->annotationsReader->getPropertyAnnotations($reflectionProperty);
 
         foreach ($annotations as $annotation) {
             if ($annotation instanceof Assert\NotBlank || $annotation instanceof Assert\NotNull) {
-                // To support symfony/validator < 4.3
-                if ($annotation instanceof Assert\NotBlank && \property_exists($annotation, 'allowNull') && $annotation->allowNull) {
-                    // The field is optional
-                    continue;
-                }
-
                 // The field is required
                 if (null === $this->schema) {
                     continue;
@@ -64,34 +54,34 @@ class SymfonyConstraintAnnotationReader
                     continue;
                 }
 
-                $existingRequiredFields =  OA\UNDEFINED !== $this->schema->required ? $this->schema->required : [];
+                $existingRequiredFields = $this->schema->getRequired() ?? [];
                 $existingRequiredFields[] = $propertyName;
 
-                $this->schema->required = array_values(array_unique($existingRequiredFields));
+                $this->schema->setRequired(array_values(array_unique($existingRequiredFields)));
             } elseif ($annotation instanceof Assert\Length) {
-                $property->minLength = (int) $annotation->min;
-                $property->maxLength = (int) $annotation->max;
+                $property->setMinLength($annotation->min);
+                $property->setMaxLength($annotation->max);
             } elseif ($annotation instanceof Assert\Regex) {
                 $this->appendPattern($property, $annotation->getHtmlPattern());
             } elseif ($annotation instanceof Assert\Count) {
-                $property->minItems = (int) $annotation->min;
-                $property->maxItems = (int) $annotation->max;
+                $property->setMinItems($annotation->min);
+                $property->setMaxItems($annotation->max);
             } elseif ($annotation instanceof Assert\Choice) {
-                $values = $annotation->callback ? call_user_func(is_array($annotation->callback) ? $annotation->callback : [$reflection->class, $annotation->callback]) : $annotation->choices;
-                $property->enum = array_values($values);
+                $property->setEnum($annotation->callback ? call_user_func(is_array($annotation->callback) ? $annotation->callback : [$reflectionProperty->class, $annotation->callback]) : $annotation->choices);
+            } elseif ($annotation instanceof Assert\Expression) {
+                $this->appendPattern($property, $annotation->message);
             } elseif ($annotation instanceof Assert\Range) {
-                $property->minimum = (int) $annotation->min;
-                $property->maximum = (int) $annotation->max;
+                $property->setMinimum($annotation->min);
+                $property->setMaximum($annotation->max);
             } elseif ($annotation instanceof Assert\LessThan) {
-                $property->exclusiveMaximum = true;
-                $property->maximum = (int) $annotation->value;
+                $property->setExclusiveMaximum($annotation->value);
             } elseif ($annotation instanceof Assert\LessThanOrEqual) {
-                $property->maximum = (int) $annotation->value;
+                $property->setMaximum($annotation->value);
             }
         }
     }
 
-    public function setSchema($schema): void
+    public function setSchema($schema)
     {
         $this->schema = $schema;
     }
@@ -99,14 +89,15 @@ class SymfonyConstraintAnnotationReader
     /**
      * Get assigned property name for property schema.
      */
-    private function getSchemaPropertyName(OA\Schema $property): ?string
+    private function getSchemaPropertyName(Schema $property)
     {
         if (null === $this->schema) {
             return null;
         }
-        foreach ($this->schema->properties as $schemaProperty) {
+
+        foreach ($this->schema->getProperties() as $name => $schemaProperty) {
             if ($schemaProperty === $property) {
-                return OA\UNDEFINED !== $schemaProperty->property ? $schemaProperty->property : null;
+                return $name;
             }
         }
 
@@ -116,15 +107,16 @@ class SymfonyConstraintAnnotationReader
     /**
      * Append the pattern from the constraint to the existing pattern.
      */
-    private function appendPattern(OA\Schema $property, $newPattern): void
+    private function appendPattern(Schema $property, $newPattern)
     {
         if (null === $newPattern) {
             return;
         }
-        if (OA\UNDEFINED !== $property->pattern) {
-            $property->pattern = sprintf('%s, %s', $property->pattern, $newPattern);
+
+        if (null !== $property->getPattern()) {
+            $property->setPattern(sprintf('%s, %s', $property->getPattern(), $newPattern));
         } else {
-            $property->pattern = $newPattern;
+            $property->setPattern($newPattern);
         }
     }
 }

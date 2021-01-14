@@ -11,64 +11,67 @@
 
 namespace Nelmio\ApiDocBundle\Tests\Functional;
 
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-
 class SwaggerUiTest extends WebTestCase
 {
-    /**
-     * @var KernelBrowser
-     */
-    private $client;
-
-    protected function setUp(): void
+    protected static function createClient(array $options = [], array $server = [])
     {
-        parent::setUp();
-
-        $this->client = static::createClient([], ['HTTP_HOST' => 'api.example.com', 'PHP_SELF' => '/app_dev.php/docs', 'SCRIPT_FILENAME' => '/var/www/app/web/app_dev.php']);
+        return parent::createClient([], $server + ['HTTP_HOST' => 'api.example.com', 'PHP_SELF' => '/app_dev.php/docs', 'SCRIPT_FILENAME' => '/var/www/app/web/app_dev.php']);
     }
 
-    public function testSwaggerUi()
+    /**
+     * @dataProvider areaProvider
+     */
+    public function testSwaggerUi($url, $area, $expected)
     {
-        $crawler = $this->client->request('GET', '/app_dev.php/docs');
+        $client = self::createClient();
+        $crawler = $client->request('GET', '/app_dev.php'.$url);
 
-        $response = $this->client->getResponse();
+        $response = $client->getResponse();
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals('UTF-8', $response->getCharset());
         $this->assertEquals('text/html; charset=UTF-8', $response->headers->get('Content-Type'));
-
-        $expected = json_decode($this->getOpenApiDefinition()->toJson(), true);
 
         $this->assertEquals($expected, json_decode($crawler->filterXPath('//script[@id="swagger-data"]')->text(), true)['spec']);
     }
 
-    public function testApiPlatformSwaggerUi()
+    public function areaProvider()
     {
-        $crawler = $this->client->request('GET', '/app_dev.php/docs/test');
+        $expected = $this->getSwaggerDefinition()->toArray();
+        $expected['basePath'] = '/app_dev.php';
 
-        $response = $this->client->getResponse();
-        $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals('text/html; charset=UTF-8', $response->headers->get('Content-Type'));
+        yield ['/docs', 'default', $expected];
 
-        $expected = json_decode($this->getOpenApiDefinition('test')->toJson(), true);
-        $expected['servers'] = [
-            ['url' => 'http://api.example.com/app_dev.php'],
+        // Api-platform documentation
+        $expected['info']['title'] = 'My Test App';
+        $expected['paths'] = [
+            '/api/dummies' => $expected['paths']['/api/dummies'],
+            '/api/foo' => $expected['paths']['/api/foo'],
+            '/api/dummies/{id}' => $expected['paths']['/api/dummies/{id}'],
+            '/test/test/' => ['get' => [
+                'responses' => ['200' => ['description' => 'Test']],
+            ]],
+        ];
+        $expected['definitions'] = [
+            'Dummy' => $expected['definitions']['Dummy'],
+            'Test' => ['type' => 'string'],
+            'JMSPicture_mini' => ['type' => 'object'],
+            'BazingaUser_grouped' => ['type' => 'object'],
         ];
 
-        $this->assertEquals($expected, json_decode($crawler->filterXPath('//script[@id="swagger-data"]')->text(), true)['spec']);
+        yield ['/docs/test', 'test', $expected];
     }
 
     public function testJsonDocs()
     {
-        $this->client->request('GET', '/app_dev.php/docs.json');
+        $client = self::createClient();
+        $client->request('GET', '/app_dev.php/docs.json');
 
-        $response = $this->client->getResponse();
+        $response = $client->getResponse();
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals('application/json', $response->headers->get('Content-Type'));
 
-        $expected = json_decode($this->getOpenApiDefinition()->toJson(), true);
-        $expected['servers'] = [
-            ['url' => 'http://api.example.com/app_dev.php'],
-        ];
+        $expected = $this->getSwaggerDefinition()->toArray();
+        $expected['basePath'] = '/app_dev.php';
+        $expected['host'] = 'api.example.com';
 
         $this->assertEquals($expected, json_decode($response->getContent(), true));
     }

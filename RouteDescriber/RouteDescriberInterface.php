@@ -11,10 +11,10 @@
 
 namespace Nelmio\ApiDocBundle\RouteDescriber;
 
-use OpenApi\Annotations\OpenApi;
+use EXSyst\Component\Swagger\Swagger;
 use Symfony\Component\Routing\Route;
 
 interface RouteDescriberInterface
 {
-    public function describe(OpenApi $api, Route $route, \ReflectionMethod $reflectionMethod);
+    public function describe(Swagger $api, Route $route, \ReflectionMethod $reflectionMethod);
 }

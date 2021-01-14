@@ -43,7 +43,7 @@ In this case the class ``App\Entity\User`` will be aliased into:
         class HomeController
         {
             /**
-             * @OA\Response(response=200, @OA\JsonContent(ref="#/components/schemas/MyModel"))
+             * @SWG\Response(response=200, @SWG\Schema(ref="#/definitions/MyModel"))
              */
             public function indexAction()
             {

@@ -12,10 +12,9 @@
 namespace Nelmio\ApiDocBundle\RouteDescriber;
 
 use Doctrine\Common\Annotations\Reader;
+use EXSyst\Component\Swagger\Swagger;
 use FOS\RestBundle\Controller\Annotations\QueryParam;
 use FOS\RestBundle\Controller\Annotations\RequestParam;
-use Nelmio\ApiDocBundle\OpenApiPhp\Util;
-use OpenApi\Annotations as OA;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\Regex;
@@ -24,61 +23,66 @@ final class FosRestDescriber implements RouteDescriberInterface
 {
     use RouteDescriberTrait;
 
-    /** @var Reader */
     private $annotationReader;
 
-    /** @var string[] */
-    private $mediaTypes;
-
-    public function __construct(Reader $annotationReader, array $mediaTypes)
+    public function __construct(Reader $annotationReader)
     {
         $this->annotationReader = $annotationReader;
-        $this->mediaTypes = $mediaTypes;
     }
 
-    public function describe(OA\OpenApi $api, Route $route, \ReflectionMethod $reflectionMethod)
+    public function describe(Swagger $api, Route $route, \ReflectionMethod $reflectionMethod)
     {
         $annotations = $this->annotationReader->getMethodAnnotations($reflectionMethod);
-        $annotations = array_filter($annotations, static function ($value) {
+        $annotations = array_filter($annotations, function ($value) {
             return $value instanceof RequestParam || $value instanceof QueryParam;
         });
 
         foreach ($this->getOperations($api, $route) as $operation) {
             foreach ($annotations as $annotation) {
-                $parameterName = $annotation->key ?? $annotation->getName(); // the key used by fosrest
-
                 if ($annotation instanceof QueryParam) {
-                    $name = $parameterName.($annotation->map ? '[]' : '');
-                    $parameter = Util::getOperationParameter($operation, $name, 'query');
-                    $parameter->allowEmptyValue = $annotation->nullable && $annotation->allowBlank;
+                    $name = $annotation->getName().($annotation->map ? '[]' : '');
+                    $parameter = $operation->getParameters()->get($name, 'query');
+                    $parameter->setAllowEmptyValue($annotation->nullable && $annotation->allowBlank);
 
-                    $parameter->required = !$annotation->nullable && $annotation->strict;
-
-                    if (OA\UNDEFINED === $parameter->description) {
-                        $parameter->description = $annotation->description;
-                    }
-
-                    if ($annotation->map) {
-                        $parameter->explode = true;
-                    }
-
-                    $schema = Util::getChild($parameter, OA\Schema::class);
-                    $this->describeCommonSchemaFromAnnotation($schema, $annotation);
+                    $parameter->setRequired(!$annotation->nullable && $annotation->strict);
                 } else {
-                    /** @var OA\RequestBody $requestBody */
-                    $requestBody = Util::getChild($operation, OA\RequestBody::class);
-                    foreach ($this->mediaTypes as $mediaType) {
-                        $contentSchema = $this->getContentSchemaForType($requestBody, $mediaType);
-                        $schema = Util::getProperty($contentSchema, $parameterName);
+                    $body = $operation->getParameters()->get('body', 'body')->getSchema();
+                    $body->setType('object');
+                    $parameter = $body->getProperties()->get($annotation->getName());
 
-                        if (!$annotation->nullable && $annotation->strict) {
-                            $requiredParameters = is_array($contentSchema->required) ? $contentSchema->required : [];
-                            $requiredParameters[] = $parameterName;
+                    if (!$annotation->nullable && $annotation->strict) {
+                        $requiredParameters = $body->getRequired();
+                        $requiredParameters[] = $annotation->getName();
 
-                            $contentSchema->required = array_values(array_unique($requiredParameters));
-                        }
-                        $this->describeCommonSchemaFromAnnotation($schema, $annotation);
+                        $body->setRequired(array_values(array_unique($requiredParameters)));
                     }
+                }
+
+                $parameter->setDefault($annotation->getDefault());
+                if (null !== $parameter->getType()) {
+                    continue;
+                }
+
+                if (null === $parameter->getDescription()) {
+                    $parameter->setDescription($annotation->description);
+                }
+
+                if ($annotation->map) {
+                    $parameter->setType('array');
+                    $parameter->setCollectionFormat('multi');
+                    $parameter = $parameter->getItems();
+                }
+
+                $parameter->setType('string');
+
+                $pattern = $this->getPattern($annotation->requirements);
+                if (null !== $pattern) {
+                    $parameter->setPattern($pattern);
+                }
+
+                $format = $this->getFormat($annotation->requirements);
+                if (null !== $format) {
+                    $parameter->setFormat($format);
                 }
             }
         }
@@ -110,64 +114,5 @@ final class FosRestDescriber implements RouteDescriberInterface
         }
 
         return null;
-    }
-
-    private function getContentSchemaForType(OA\RequestBody $requestBody, string $type): OA\Schema
-    {
-        $requestBody->content = OA\UNDEFINED !== $requestBody->content ? $requestBody->content : [];
-        switch ($type) {
-            case 'json':
-                $contentType = 'application/json';
-
-                break;
-            case 'xml':
-                $contentType = 'application/xml';
-
-                break;
-            default:
-                throw new \InvalidArgumentException('Unsupported media type');
-        }
-        if (!isset($requestBody->content[$contentType])) {
-            $requestBody->content[$contentType] = new OA\MediaType(
-                [
-                    'mediaType' => $contentType,
-                ]
-            );
-            /** @var OA\Schema $schema */
-            $schema = Util::getChild(
-                $requestBody->content[$contentType],
-                OA\Schema::class
-            );
-            $schema->type = 'object';
-        }
-
-        return Util::getChild(
-            $requestBody->content[$contentType],
-            OA\Schema::class
-        );
-    }
-
-    private function describeCommonSchemaFromAnnotation(OA\Schema $schema, $annotation)
-    {
-        $schema->default = $annotation->getDefault();
-
-        if (OA\UNDEFINED === $schema->type) {
-            $schema->type = $annotation->map ? 'array' : 'string';
-        }
-
-        if ($annotation->map) {
-            $schema->type = 'array';
-            $schema->items = Util::getChild($schema, OA\Items::class);
-        }
-
-        $pattern = $this->getPattern($annotation->requirements);
-        if (null !== $pattern) {
-            $schema->pattern = $pattern;
-        }
-
-        $format = $this->getFormat($annotation->requirements);
-        if (null !== $format) {
-            $schema->format = $format;
-        }
     }
 }

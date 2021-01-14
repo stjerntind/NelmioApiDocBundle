@@ -13,13 +13,13 @@ namespace Nelmio\ApiDocBundle\Tests\Functional\Entity;
 
 use JMS\Serializer\Annotation as Serializer;
 use Nelmio\ApiDocBundle\Annotation\Model;
-use OpenApi\Annotations as OA;
+use Swagger\Annotations as SWG;
 
 /**
  * @Serializer\ExclusionPolicy("all")
- * @OA\Schema(
+ * @SWG\Definition(
  *     required={"id", "user"},
- *     @OA\Property(property="virtual", ref=@Model(type=JMSUser::class))
+ *     @SWG\Property(property="virtual", ref=@Model(type=JMSUser::class))
  * )
  */
 class JMSComplex
@@ -32,7 +32,7 @@ class JMSComplex
     private $id;
 
     /**
-     * @OA\Property(ref=@Model(type=JMSUser::class))
+     * @SWG\Property(ref=@Model(type=JMSUser::class))
      * @Serializer\Expose
      * @Serializer\Groups({"details"})
      * @Serializer\SerializedName("user")
@@ -45,14 +45,4 @@ class JMSComplex
      * @Serializer\Groups({"list"})
      */
     private $name;
-
-    /**
-     * @Serializer\VirtualProperty
-     * @Serializer\Expose
-     * @Serializer\Groups({"list"})
-     * @OA\Property(ref=@Model(type=JMSUser::class))
-     */
-    public function getVirtualFriend()
-    {
-    }
 }

@@ -1,6 +1,0 @@
-.* export-ignore
-*.md export-ignore
-Tests export-ignore
-Resources/doc export-ignore
-phpunit export-ignore
-phpunit.xml.dist export-ignore

@@ -11,8 +11,8 @@
 
 namespace Nelmio\ApiDocBundle\Tests\Functional\Controller;
 
-use OpenApi\Annotations as OA;
-use Symfony\Component\Routing\Annotation\Route;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
+use Swagger\Annotations as SWG;
 
 /**
  * @Route("/test", host="api-test.example.com")
@@ -20,7 +20,7 @@ use Symfony\Component\Routing\Annotation\Route;
 class TestController
 {
     /**
-     * @OA\Response(
+     * @SWG\Response(
      *     response="200",
      *     description="Test"
      * )

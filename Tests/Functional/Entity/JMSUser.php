@@ -12,7 +12,7 @@
 namespace Nelmio\ApiDocBundle\Tests\Functional\Entity;
 
 use JMS\Serializer\Annotation as Serializer;
-use OpenApi\Annotations as OA;
+use Swagger\Annotations as SWG;
 
 /**
  * User.
@@ -26,7 +26,7 @@ class JMSUser
      * @Serializer\Expose
      * @Serializer\Groups({"list"})
      *
-     * @OA\Property(description = "User id", readOnly = true, title = "userid", example=1, default = null)
+     * @SWG\Property(description = "User id", readOnly = true, title = "userid", example=1, default = null)
      */
     private $id;
 
@@ -35,36 +35,26 @@ class JMSUser
      * @Serializer\Expose
      * @Serializer\SerializedName("daysOnline")
      *
-     * @OA\Property(default = 0, minimum = 1, maximum = 300)
+     * @SWG\Property(default = 0, minimum = 1, maximum = 300)
      */
     private $daysOnline;
 
     /**
      * @Serializer\Type("string")
      * @Serializer\Expose
-     * @OA\Property(readOnly = false)
+     * @SWG\Property(readOnly = false)
      * @Serializer\Groups({"details"})
      */
     private $email;
 
     /**
-     * User Roles Comment.
-     *
      * @Serializer\Type("array<string>")
      * @Serializer\Accessor(getter="getRoles", setter="setRoles")
      * @Serializer\Expose
      *
-     * @OA\Property(default = {"user"}, description = "Roles list", example="[""ADMIN"",""SUPERUSER""]", title="roles")
+     * @SWG\Property(default = {"user"}, description = "Roles list", example="[""ADMIN"",""SUPERUSER""]", title="roles")
      */
     private $roles;
-
-    /**
-     * User Location.
-     *
-     * @Serializer\Type("string")
-     * @Serializer\Expose
-     */
-    private $location;
 
     /**
      * @Serializer\Type("string")
@@ -72,7 +62,7 @@ class JMSUser
     private $password;
 
     /**
-     * @OA\Property(property="last_update", type="date")
+     * @SWG\Property(property="last_update", type="date")
      * @Serializer\Expose
      */
     private $updatedAt;
@@ -113,7 +103,7 @@ class JMSUser
      * @Serializer\Expose
      * @Serializer\SerializedName("friendsNumber")
      *
-     * @OA\Property(type = "string", minLength = 1, maxLength = 100)
+     * @SWG\Property(type = "string", minLength = 1, maxLength = 100)
      */
     private $friendsNumber;
 
@@ -132,7 +122,7 @@ class JMSUser
      * @Serializer\Type("string")
      * @Serializer\Expose
      *
-     * @OA\Property(enum = {"disabled", "enabled"})
+     * @SWG\Property(enum = {"disabled", "enabled"})
      */
     private $status;
 
@@ -189,13 +179,6 @@ class JMSUser
      * @Serializer\Expose
      */
     private $deepFreeFormObjectCollection;
-
-    /**
-     * @Serializer\Type("Nelmio\ApiDocBundle\Tests\Functional\Entity\JMSNote")
-     * @Serializer\Inline()
-     * @Serializer\Expose
-     */
-    private $notes;
 
     public function setRoles($roles)
     {
